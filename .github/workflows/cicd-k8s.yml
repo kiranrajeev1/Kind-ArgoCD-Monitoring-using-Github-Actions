@@ -54,9 +54,12 @@ jobs:
           helm repo update
           kubectl create ns monitoring || true
           helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack -n monitoring
-          echo "Waiting for Prometheus & Grafana..."
-          kubectl wait --for=condition=available --timeout=300s deployment -l app.kubernetes.io/name=grafana -n monitoring
-          kubectl wait --for=condition=available --timeout=300s deployment -l app.kubernetes.io/name=prometheus -n monitoring
+
+          echo "Waiting for Grafana to be ready..."
+          kubectl rollout status deployment/kube-prometheus-stack-grafana -n monitoring --timeout=600s || kubectl get pods -n monitoring
+
+          echo "Waiting for Prometheus to be ready..."
+          kubectl rollout status deployment/kube-prometheus-stack-kube-prome-prometheus -n monitoring --timeout=600s || kubectl get pods -n monitoring
 
       # --- Verification ---
       - name: Verify Deployments
