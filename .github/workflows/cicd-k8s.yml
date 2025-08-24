@@ -1,0 +1,84 @@
+name: Kind + ArgoCD + Monitoring Lab
+
+on:
+  workflow_dispatch:   # Run manually from Actions tab
+
+jobs:
+  lab:
+    runs-on: self-hosted   # 👈 Runs on your local machine
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # --- KIND Cluster ---
+      - name: Create kind cluster
+        run: |
+          kind create cluster --name demo-cluster || echo "Cluster already exists"
+          kubectl cluster-info
+
+      # --- ArgoCD ---
+      - name: Install ArgoCD
+        run: |
+          kubectl create namespace argocd || true
+          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+          echo "Waiting for ArgoCD pods..."
+          kubectl wait --for=condition=available --timeout=300s deployment -l app.kubernetes.io/part-of=argocd -n argocd
+
+      - name: Create ArgoCD App
+        run: |
+          cat <<EOF | kubectl apply -f -
+          apiVersion: argoproj.io/v1alpha1
+          kind: Application
+          metadata:
+            name: sample-app
+            namespace: argocd
+          spec:
+            project: default
+            source:
+              repoURL: https://github.com/bhuvan-raj/nginx-deployment-for-argo.git
+              targetRevision: main
+              path: myapp
+            destination:
+              server: https://kubernetes.default.svc
+              namespace: default
+            syncPolicy:
+              automated:
+                prune: true
+                selfHeal: true
+          EOF
+
+      # --- Monitoring Stack ---
+      - name: Install Prometheus + Grafana
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo update
+          kubectl create ns monitoring || true
+          helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack -n monitoring
+          echo "Waiting for Prometheus & Grafana..."
+          kubectl wait --for=condition=available --timeout=300s deployment -l app.kubernetes.io/name=grafana -n monitoring
+          kubectl wait --for=condition=available --timeout=300s deployment -l app.kubernetes.io/name=prometheus -n monitoring
+
+      # --- Verification ---
+      - name: Verify Deployments
+        run: |
+          echo "=== ArgoCD Apps ==="
+          kubectl get applications -n argocd
+          echo "=== Pods ==="
+          kubectl get pods -A
+          echo "=== Services ==="
+          kubectl get svc -A
+
+      # --- Access Info ---
+      - name: Show Access Instructions
+        run: |
+          echo "----------------------------------------"
+          echo "To access ArgoCD UI:"
+          echo "kubectl port-forward svc/argocd-server -n argocd 8080:443"
+          echo "Login with username 'admin' and password from:"
+          echo "kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d"
+          echo "----------------------------------------"
+          echo "To access Grafana UI:"
+          echo "kubectl port-forward svc/kube-prometheus-stack-grafana -n monitoring 3000:80"
+          echo "Login with username 'admin' and password from:"
+          echo "kubectl get secret kube-prometheus-stack-grafana -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d"
+          echo "----------------------------------------"
