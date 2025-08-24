@@ -5,7 +5,7 @@ on:
 
 jobs:
   lab:
-    runs-on: self-hosted   # 👈 Runs on your local machine
+    runs-on: bubu   # 👈 Runs on your local machine
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
