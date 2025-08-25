@@ -76,13 +76,18 @@ jobs:
       - name: Show Access Instructions
         run: |
           echo "----------------------------------------"
-          echo "To access ArgoCD UI:"
-          echo "kubectl port-forward svc/argocd-server -n argocd 8080:443"
-          echo "Login with username 'admin' and password from:"
-          echo "kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d"
+          echo "To access ArgoCD UI (port-forward in another terminal):"
+          kubectl port-forward svc/argocd-server -n argocd 8080:443 &
+          sleep 5
+          echo "ArgoCD login password:"
+          kubectl -n argocd get secret argocd-initial-admin-secret \
+            -o jsonpath='{.data.password}' | base64 --decode; echo
           echo "----------------------------------------"
-          echo "To access Grafana UI:"
-          echo "kubectl port-forward svc/kube-prometheus-stack-grafana -n monitoring 3000:80"
-          echo "Login with username 'admin' and password from:"
-          echo "kubectl get secret kube-prometheus-stack-grafana -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d"
+          echo "To access Grafana UI (port-forward in another terminal):"
+          kubectl port-forward svc/kube-prometheus-stack-grafana -n monitoring 3000:80 &
+          sleep 5
+          echo "Grafana admin password:"
+          kubectl -n monitoring get secret kube-prometheus-stack-grafana \
+            -o jsonpath='{.data.admin-password}' | base64 --decode; echo
           echo "----------------------------------------"
+      
