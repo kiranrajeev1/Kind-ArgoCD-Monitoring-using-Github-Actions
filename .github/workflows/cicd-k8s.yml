@@ -13,7 +13,8 @@ jobs:
       # --- KIND Cluster ---
       - name: Create kind cluster
         run: |
-          minikube start --name demo-cluster || echo "Cluster already exists"
+          minikube start -p demo-cluster
+          kubectl config use-context demo-cluster
           kubectl cluster-info
 
       # --- ArgoCD ---
