@@ -5,7 +5,7 @@ on:
 
 jobs:
   lab:
-    runs-on: bubu   # 👈 Runs on your local machine
+    runs-on: kiran   # 👈 Runs on your local machine
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -13,7 +13,7 @@ jobs:
       # --- KIND Cluster ---
       - name: Create kind cluster
         run: |
-          kind create cluster --name demo-cluster || echo "Cluster already exists"
+          minikube start --name demo-cluster || echo "Cluster already exists"
           kubectl cluster-info
 
       # --- ArgoCD ---
